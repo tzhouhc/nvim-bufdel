@@ -70,6 +70,21 @@ local function delete_buffer(buf, force)
   end
 end
 
+local function do_delete_buffer_expr(bufexpr, force)
+  -- retrieve buffer number from buffer expression
+  if bufexpr == nil then
+    delete_buffer(vim.fn.bufnr(), force)
+    return
+  end
+  if tonumber(bufexpr) then
+    delete_buffer(tonumber(bufexpr), force)
+    return
+  end
+  bufexpr = string.gsub(bufexpr, [[^['"]+]], '') -- escape any start quote
+  bufexpr = string.gsub(bufexpr, [[['"]+$]], '') -- escape any end quote
+  delete_buffer(vim.fn.bufnr(bufexpr), force)
+end
+
 local function default_empty_action()
   -- don't exit and create a new empty buffer instead
   vim.cmd('enew')
@@ -92,22 +107,14 @@ function M.delete_buffer_expr(bufexpr, force)
     -- don't exit and create a new empty buffer instead
     if not options.empty_action then
       default_empty_action()
+      do_delete_buffer_expr(bufexpr, force)
     else
+      do_delete_buffer_expr(bufexpr, force)
       options.empty_action(bufexpr)
     end
+  else
+    do_delete_buffer_expr(bufexpr, force)
   end
-  -- retrieve buffer number from buffer expression
-  if bufexpr == nil then
-    delete_buffer(vim.fn.bufnr(), force)
-    return
-  end
-  if tonumber(bufexpr) then
-    delete_buffer(tonumber(bufexpr), force)
-    return
-  end
-  bufexpr = string.gsub(bufexpr, [[^['"]+]], '') -- escape any start quote
-  bufexpr = string.gsub(bufexpr, [[['"]+$]], '') -- escape any end quote
-  delete_buffer(vim.fn.bufnr(bufexpr), force)
 end
 
 -- Delete all listed buffers except current, ignoring changes if 'force' is set

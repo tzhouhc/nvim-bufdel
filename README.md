@@ -77,3 +77,43 @@ Supported values:
 * `alternate`: switch to the alternate buffer (same behavior as without the
   plugin).
 * You can also pass your own function to select the next buffer.
+
+### Custom Action for Last Buffer
+
+Instead of quitting Neovim when the last buffer is closed or opening an empty
+new buffer, you can also supply your own custom function to execute via the
+`empty_action` option:
+
+```lua
+require('bufdel').setup({
+  quit = false, -- `true` will still takes priority over empty_action.
+  empty_action = function(_)
+    require("snacks")  -- you will need `dependencies = { "folke/snacks.nvim" }`
+    Snacks.dashboard()
+    -- ignored here, but bufexpr is passed in containing the name of the
+    -- buffer just closed.
+  end
+})
+```
+
+Another example, which opens Yazi (assuming, of course, that you have
+[mikavilpas/yazi.nvim](https://github.com/mikavilpas/yazi.nvim) installed):
+
+```lua
+require('bufdel').setup({
+  quit = false,
+  empty_action = function(_)
+    vim.cmd("Yazi")
+  end
+})
+```
+
+For reference, the default action is
+
+```lua
+local function default_empty_action()
+  -- don't exit and create a new empty buffer instead
+  vim.cmd('enew')
+  vim.cmd('bp')
+end
+```
