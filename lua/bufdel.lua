@@ -5,8 +5,11 @@
 -------------------- VARIABLES -----------------------------
 local M = {}
 local options = {
-  next = 'tabs',  -- how to retrieve the next buffer
-  quit = true,    -- quit Neovim when last buffer is closed
+  next = 'tabs',      -- how to retrieve the next buffer
+  quit = true,        -- quit Neovim when last buffer is closed
+  empty_action = nil, -- perform a custom action instead of opening empty
+                      -- buffer. Function receives `bufexpr` as input, which
+                      -- can be what `-complete=buffer` provides or bufnr
 }
 
 -------------------- PRIVATE -------------------------------
@@ -33,7 +36,7 @@ local function get_next_buf(buf)
   end
   -- build table mapping buffers to their actual position
   local buffers, buf_index = {}, 1
-  for i, bufinfo in ipairs(vim.fn.getbufinfo({buflisted = 1})) do
+  for i, bufinfo in ipairs(vim.fn.getbufinfo({ buflisted = 1 })) do
     if buf == bufinfo.bufnr then
       buf_index = i
     end
@@ -67,10 +70,16 @@ local function delete_buffer(buf, force)
   end
 end
 
+local function default_empty_action()
+  -- don't exit and create a new empty buffer instead
+  vim.cmd('enew')
+  vim.cmd('bp')
+end
+
 -------------------- PUBLIC --------------------------------
 -- Delete a given buffer, ignoring changes if 'force' is set
 function M.delete_buffer_expr(bufexpr, force)
-  if #vim.fn.getbufinfo({buflisted = 1}) < 2 then
+  if #vim.fn.getbufinfo({ buflisted = 1 }) < 2 then
     -- exit when there is only one buffer left
     if options.quit then
       if force then
@@ -81,8 +90,11 @@ function M.delete_buffer_expr(bufexpr, force)
       return
     end
     -- don't exit and create a new empty buffer instead
-    vim.cmd('enew')
-    vim.cmd('bp')
+    if not options.empty_action then
+      default_empty_action()
+    else
+      options.empty_action(bufexpr)
+    end
   end
   -- retrieve buffer number from buffer expression
   if bufexpr == nil then
@@ -93,14 +105,14 @@ function M.delete_buffer_expr(bufexpr, force)
     delete_buffer(tonumber(bufexpr), force)
     return
   end
-  bufexpr = string.gsub(bufexpr, [[^['"]+]], '')  -- escape any start quote
-  bufexpr = string.gsub(bufexpr, [[['"]+$]], '')  -- escape any end quote
+  bufexpr = string.gsub(bufexpr, [[^['"]+]], '') -- escape any start quote
+  bufexpr = string.gsub(bufexpr, [[['"]+$]], '') -- escape any end quote
   delete_buffer(vim.fn.bufnr(bufexpr), force)
 end
 
 -- Delete all listed buffers except current, ignoring changes if 'force' is set
 function M.delete_buffer_others(force)
-  for _, bufinfo in ipairs(vim.fn.getbufinfo({buflisted = 1})) do
+  for _, bufinfo in ipairs(vim.fn.getbufinfo({ buflisted = 1 })) do
     if bufinfo.bufnr ~= vim.fn.bufnr() then
       delete_buffer(bufinfo.bufnr, force)
     end
